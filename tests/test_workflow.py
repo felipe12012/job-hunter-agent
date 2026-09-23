@@ -22,5 +22,5 @@ def test_workflow_yaml_is_valid_and_scheduled_daily():
 
 def test_workflow_uses_required_secrets():
     content = WORKFLOW_PATH.read_text(encoding="utf-8")
-    for secret_name in ("DEEPSEEK_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+    for secret_name in ("DEEPSEEK_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CV_JSON"):
         assert f"secrets.{secret_name}" in content
