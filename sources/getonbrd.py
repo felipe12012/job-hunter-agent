@@ -4,11 +4,18 @@ from bs4 import BeautifulSoup
 from models import JobListing
 
 LISTINGS_URL = "https://www.getonbrd.com/jobs/programming"
-USER_AGENT = "Mozilla/5.0 (compatible; job-hunter-agent/1.0)"
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-CL,es;q=0.9,en;q=0.8",
+}
 
 
 def fetch_html(url: str = LISTINGS_URL) -> str:
-    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+    response = requests.get(url, headers=REQUEST_HEADERS, timeout=30)
     response.raise_for_status()
     return response.text
 
