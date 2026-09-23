@@ -16,6 +16,7 @@ def test_workflow_yaml_is_valid_and_scheduled_daily():
 
     job = parsed["jobs"]["run-pipeline"]
     assert "defaults" not in job
+    assert job["environment"] == "env"
     assert parsed["permissions"]["contents"] == "write"
 
 
