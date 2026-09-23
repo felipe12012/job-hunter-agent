@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-WORKFLOW_PATH = Path(__file__).parent.parent.parent / ".github" / "workflows" / "daily.yml"
+WORKFLOW_PATH = Path(__file__).parent.parent / ".github" / "workflows" / "daily.yml"
 
 
 def test_workflow_yaml_is_valid_and_scheduled_daily():
@@ -15,7 +15,7 @@ def test_workflow_yaml_is_valid_and_scheduled_daily():
     assert "workflow_dispatch" in triggers
 
     job = parsed["jobs"]["run-pipeline"]
-    assert job["defaults"]["run"]["working-directory"] == "job-hunter-agent"
+    assert "defaults" not in job
     assert parsed["permissions"]["contents"] == "write"
 
 
