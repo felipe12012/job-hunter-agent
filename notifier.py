@@ -26,8 +26,9 @@ def send_digest(
     scored_listings: list[ScoredListing],
     bot_token: str | None = None,
     chat_id: str | None = None,
+    match_threshold: int = MATCH_THRESHOLD,
 ) -> bool:
-    qualifying = [s for s in scored_listings if s.match_pct >= MATCH_THRESHOLD]
+    qualifying = [s for s in scored_listings if s.match_pct >= match_threshold]
     if not qualifying:
         return False
 

@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from sources.getonbrd import fetch_listings
 
 SEEN_JOBS_PATH = Path(__file__).parent / "data" / "seen_jobs.json"
 CV_PATH = Path(__file__).parent / "cv.json"
+DEFAULT_MATCH_THRESHOLD = 80
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -43,8 +45,11 @@ def run() -> int:
         )
         return 1
 
+    raw_threshold = os.environ.get("MATCH_THRESHOLD")
+    match_threshold = int(raw_threshold) if raw_threshold else DEFAULT_MATCH_THRESHOLD
+
     try:
-        send_digest(scored)
+        send_digest(scored, match_threshold=match_threshold)
     except Exception as exc:
         print(f"Notification failed: {exc}", file=sys.stderr)
         return 1

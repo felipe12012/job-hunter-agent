@@ -32,6 +32,7 @@ Copiá `.env.example` a `.env` y completá:
 | `DEEPSEEK_API_KEY` | [platform.deepseek.com](https://platform.deepseek.com) → API keys |
 | `TELEGRAM_BOT_TOKEN` | Hablá con [@BotFather](https://t.me/BotFather) en Telegram → `/newbot` |
 | `TELEGRAM_CHAT_ID` | Mandale un mensaje a tu bot, después visitá `https://api.telegram.org/bot<TOKEN>/getUpdates` y buscá `"chat":{"id": ...}` |
+| `MATCH_THRESHOLD` | Opcional, % mínimo de match para recibir la oferta por Telegram. Default: `80` |
 
 `main.py` carga `.env` automáticamente (vía `python-dotenv`).
 
@@ -58,8 +59,12 @@ python main.py
 El workflow en `.github/workflows/daily.yml` corre todos los días a las 08:00 UTC. Para activarlo:
 
 1. Pusheá este repo a GitHub.
-2. En **Settings → Secrets and variables → Actions**, agregá `DEEPSEEK_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
-3. El workflow commitea `data/seen_jobs.json` de vuelta al repo después de cada corrida, así el estado persiste entre ejecuciones.
+2. En **Settings → Environments**, creá un environment llamado `env` (el nombre debe coincidir con el `environment: env` del workflow).
+3. Dentro de ese environment, agregá los secrets:
+   - `DEEPSEEK_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (mismos valores que tu `.env` local).
+   - `CV_JSON` — el contenido completo de tu `cv.json` (como texto plano/JSON). Como `cv.json` está gitignoreado, el runner no lo tiene; el workflow lo reconstruye desde este secret antes de correr `main.py`.
+4. (Opcional) En **Settings → Secrets and variables → Actions → Variables**, agregá `MATCH_THRESHOLD` si querés un umbral distinto al 80% default (esta va como *Variable*, no *Secret*, porque no es sensible).
+5. El workflow commitea `data/seen_jobs.json` de vuelta al repo después de cada corrida, así el estado persiste entre ejecuciones.
 
 **Ojo si el repo es o va a ser público:** `data/seen_jobs.json` va a acumular en el historial de git qué ofertas fuiste viendo día a día. No es información muy sensible (son slugs de ofertas públicas), pero si te molesta, considerá un repo privado para este proyecto.
 

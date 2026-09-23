@@ -58,6 +58,22 @@ def test_send_digest_skips_send_when_no_qualifying_matches(monkeypatch):
     assert called["count"] == 0
 
 
+def test_send_digest_respects_custom_match_threshold(monkeypatch):
+    sent = {}
+
+    def fake_post(url, json, timeout):
+        sent["json"] = json
+        return FakeResponse()
+
+    monkeypatch.setattr("notifier.requests.post", fake_post)
+
+    scored = [make_scored("beta-dev", 65)]
+    result = send_digest(scored, bot_token="fake-token", chat_id="12345", match_threshold=60)
+
+    assert result is True
+    assert "Python Developer" in sent["json"]["text"]
+
+
 def test_send_digest_caps_at_three_listings(monkeypatch):
     sent = {}
 

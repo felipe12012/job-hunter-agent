@@ -24,3 +24,8 @@ def test_workflow_uses_required_secrets():
     content = WORKFLOW_PATH.read_text(encoding="utf-8")
     for secret_name in ("DEEPSEEK_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CV_JSON"):
         assert f"secrets.{secret_name}" in content
+
+
+def test_workflow_passes_match_threshold_variable():
+    content = WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "vars.MATCH_THRESHOLD" in content
