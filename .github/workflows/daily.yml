@@ -43,3 +43,13 @@ jobs:
           git add data/seen_jobs.json
           git diff --cached --quiet || git commit -m "chore: update seen jobs"
           git push
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="⚠️ job-hunter-agent: el pipeline falló. Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

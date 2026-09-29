@@ -67,6 +67,7 @@ El workflow en `.github/workflows/daily.yml` corre todos los días a las 08:00 U
    - `CV_JSON` — el contenido completo de tu `cv.json` (como texto plano/JSON). Como `cv.json` está gitignoreado, el runner no lo tiene; el workflow lo reconstruye desde este secret antes de correr `main.py`.
 4. (Opcional) En **Settings → Secrets and variables → Actions → Variables**, agregá `MATCH_THRESHOLD` si querés un umbral distinto al 80% default (esta va como *Variable*, no *Secret*, porque no es sensible).
 5. El workflow commitea `data/seen_jobs.json` de vuelta al repo después de cada corrida, así el estado persiste entre ejecuciones.
+6. Si cualquier paso del job falla (dependencias, scraper caído, Jev/DeepSeek caídos, el push final), el último step (`if: failure()`) te manda un Telegram de alerta con el link al log del run — para que te enteres sin tener que entrar a revisar Actions manualmente.
 
 **Ojo si el repo es o va a ser público:** `data/seen_jobs.json` va a acumular en el historial de git qué ofertas fuiste viendo día a día. No es información muy sensible (son slugs de ofertas públicas), pero si te molesta, considerá un repo privado para este proyecto.
 
