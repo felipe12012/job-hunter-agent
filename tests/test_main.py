@@ -41,6 +41,48 @@ def test_run_marks_only_successfully_scored_listings(monkeypatch, tmp_path):
     assert saved == ["acme-python-dev"]
 
 
+def test_fetch_listings_combines_results_from_all_sources(monkeypatch):
+    monkeypatch.setattr(
+        main, "fetch_getonbrd_listings", lambda keywords: [make_listing("getonbrd-job")]
+    )
+    monkeypatch.setattr(
+        main, "fetch_computrabajo_listings", lambda keywords: [make_listing("computrabajo-job")]
+    )
+
+    listings = main.fetch_listings(["Python"])
+
+    ids = {listing.id for listing in listings}
+    assert ids == {"getonbrd-job", "computrabajo-job"}
+
+
+def test_fetch_listings_continues_when_only_one_source_fails(monkeypatch):
+    def failing_fetch(keywords):
+        raise RuntimeError("getonbrd is down")
+
+    monkeypatch.setattr(main, "fetch_getonbrd_listings", failing_fetch)
+    monkeypatch.setattr(
+        main, "fetch_computrabajo_listings", lambda keywords: [make_listing("computrabajo-job")]
+    )
+
+    listings = main.fetch_listings(["Python"])
+
+    assert [listing.id for listing in listings] == ["computrabajo-job"]
+
+
+def test_fetch_listings_raises_only_when_all_sources_fail(monkeypatch):
+    def failing_fetch(keywords):
+        raise RuntimeError("source is down")
+
+    monkeypatch.setattr(main, "fetch_getonbrd_listings", failing_fetch)
+    monkeypatch.setattr(main, "fetch_computrabajo_listings", failing_fetch)
+
+    try:
+        main.fetch_listings(["Python"])
+        assert False, "expected RuntimeError when every source fails"
+    except RuntimeError:
+        pass
+
+
 def test_run_returns_nonzero_when_scraper_fails(monkeypatch, tmp_path):
     seen_path = tmp_path / "seen_jobs.json"
     seen_path.write_text("[]", encoding="utf-8")

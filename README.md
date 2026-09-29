@@ -1,14 +1,16 @@
 # job-hunter-agent
 
-Pipeline automatizado de búsqueda de empleo. Todos los días scrapea ofertas de [GetOnBoard](https://www.getonbrd.com), las filtra por tu stack, un filtro barato (Jev/TypeSafe) decide si vale la pena mirarlas en detalle, y solo esas pocas pasan a DeepSeek para el análisis rico (% match + borrador). Te manda por Telegram solo las que matchean ≥80% junto con un borrador de mensaje de contacto listo para usar.
+Pipeline automatizado de búsqueda de empleo. Todos los días scrapea ofertas de [GetOnBoard](https://www.getonbrd.com) y [Computrabajo](https://cl.computrabajo.com), las filtra por tu stack, un filtro barato (Jev/TypeSafe) decide si vale la pena mirarlas en detalle, y solo esas pocas pasan a DeepSeek para el análisis rico (% match + borrador). Te manda por Telegram solo las que matchean ≥80% junto con un borrador de mensaje de contacto listo para usar.
 
 ## Cómo funciona
 
 ```
-GetOnBoard (scraper) -> filtro por stack -> Jev (¿vale la pena? barato, corre en el 100%) -> DeepSeek (% match + borrador, solo en las que Jev aprobó) -> Telegram (solo >=80%, top 3)
+GetOnBoard + Computrabajo (scrapers) -> filtro por stack -> Jev (¿vale la pena? barato, corre en el 100%) -> DeepSeek (% match + borrador, solo en las que Jev aprobó) -> Telegram (solo >=80%, top 3)
 ```
 
-- **`sources/getonbrd.py`** — scrapea listados de programación de GetOnBoard, filtra por keywords de tu `cv.json`.
+- **`sources/getonbrd.py`** — scrapea listados de programación de GetOnBoard, filtra por keywords de tu `cv.json`. Descripción viene en el mismo listado (1 request por oferta que matchea).
+- **`sources/computrabajo.py`** — scrapea la categoría "desarrollador" de Computrabajo Chile. El listado no trae descripción, así que primero filtra por título (barato) y recién para las que matchean hace un segundo request a la página de detalle para sacar la descripción real.
+- **`main.py`** combina ambas fuentes: si una se cae (sitio caído, HTML cambió), sigue con la otra — solo aborta si **las dos** fallan a la vez.
 - **`judge.py`** — filtro barato: le manda tu CV + la oferta a Jev (TypeSafe AI), pide una decisión sí/no ("¿vale la pena un outreach personalizado?"). Corre sobre el 100% de las ofertas nuevas, mucho más barato que llamar a DeepSeek en todas.
 - **`matcher.py`** — solo para las ofertas que Jev aprobó: le manda tu CV + la descripción a DeepSeek, pide `match_pct`, `reasoning` y un `draft_message`.
 - **`notifier.py`** — arma el digest y lo manda por Telegram (solo si hay algo ≥80% match).
@@ -77,8 +79,9 @@ El workflow en `.github/workflows/daily.yml` corre todos los días a las 08:00 U
 pytest -v
 ```
 
-## Alcance actual (v1)
+## Alcance actual (v2)
 
-- Una sola fuente: GetOnBoard. Agregar otro portal es escribir un nuevo módulo en `sources/` con la misma interfaz (`parse_listings(html, keywords) -> list[JobListing]` separado de la parte de red).
+- 2 fuentes: GetOnBoard y Computrabajo. Agregar otro portal es escribir un nuevo módulo en `sources/` con la misma interfaz (`fetch_listings(keywords) -> list[JobListing]`) y agregarlo a `SOURCE_FETCHERS` en `main.py`.
+- Computrabajo solo trae 1 página de resultados por corrida (~20 ofertas antes de filtrar por título); no pagina todavía.
 - El matching es solo verificación: compara tu CV fijo contra cada oferta. No genera un CV adaptado por vacante.
 - Notificación solo por Telegram.
