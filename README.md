@@ -1,15 +1,16 @@
 # job-hunter-agent
 
-Pipeline automatizado de búsqueda de empleo. Todos los días scrapea ofertas de [GetOnBoard](https://www.getonbrd.com), las filtra por tu stack, las puntúa contra tu CV usando DeepSeek, y te manda por Telegram solo las que matchean ≥80% junto con un borrador de mensaje de contacto listo para usar.
+Pipeline automatizado de búsqueda de empleo. Todos los días scrapea ofertas de [GetOnBoard](https://www.getonbrd.com), las filtra por tu stack, un filtro barato (Jev/TypeSafe) decide si vale la pena mirarlas en detalle, y solo esas pocas pasan a DeepSeek para el análisis rico (% match + borrador). Te manda por Telegram solo las que matchean ≥80% junto con un borrador de mensaje de contacto listo para usar.
 
 ## Cómo funciona
 
 ```
-GetOnBoard (scraper) -> filtro por stack -> DeepSeek (% match + borrador) -> Telegram (solo >=80%, top 3)
+GetOnBoard (scraper) -> filtro por stack -> Jev (¿vale la pena? barato, corre en el 100%) -> DeepSeek (% match + borrador, solo en las que Jev aprobó) -> Telegram (solo >=80%, top 3)
 ```
 
 - **`sources/getonbrd.py`** — scrapea listados de programación de GetOnBoard, filtra por keywords de tu `cv.json`.
-- **`matcher.py`** — le manda tu CV + la descripción de cada oferta a DeepSeek, pide `match_pct`, `reasoning` y un `draft_message`.
+- **`judge.py`** — filtro barato: le manda tu CV + la oferta a Jev (TypeSafe AI), pide una decisión sí/no ("¿vale la pena un outreach personalizado?"). Corre sobre el 100% de las ofertas nuevas, mucho más barato que llamar a DeepSeek en todas.
+- **`matcher.py`** — solo para las ofertas que Jev aprobó: le manda tu CV + la descripción a DeepSeek, pide `match_pct`, `reasoning` y un `draft_message`.
 - **`notifier.py`** — arma el digest y lo manda por Telegram (solo si hay algo ≥80% match).
 - **`dedup.py`** — guarda en `data/seen_jobs.json` qué ofertas ya se procesaron, para no repetirlas.
 - **`main.py`** — orquesta todo el flujo. Se corre una vez por día vía GitHub Actions (`.github/workflows/daily.yml`, 08:00 UTC).
@@ -32,6 +33,7 @@ Copiá `.env.example` a `.env` y completá:
 | `DEEPSEEK_API_KEY` | [platform.deepseek.com](https://platform.deepseek.com) → API keys |
 | `TELEGRAM_BOT_TOKEN` | Hablá con [@BotFather](https://t.me/BotFather) en Telegram → `/newbot` |
 | `TELEGRAM_CHAT_ID` | Mandale un mensaje a tu bot, después visitá `https://api.telegram.org/bot<TOKEN>/getUpdates` y buscá `"chat":{"id": ...}` |
+| `JEV_API_KEY` | [typesafe.ai](https://typesafe.ai) — filtro barato que decide qué ofertas vale la pena mandarle a DeepSeek |
 | `MATCH_THRESHOLD` | Opcional, % mínimo de match para recibir la oferta por Telegram. Default: `80` |
 
 `main.py` carga `.env` automáticamente (vía `python-dotenv`).
@@ -61,7 +63,7 @@ El workflow en `.github/workflows/daily.yml` corre todos los días a las 08:00 U
 1. Pusheá este repo a GitHub.
 2. En **Settings → Environments**, creá un environment llamado `env` (el nombre debe coincidir con el `environment: env` del workflow).
 3. Dentro de ese environment, agregá los secrets:
-   - `DEEPSEEK_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (mismos valores que tu `.env` local).
+   - `DEEPSEEK_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `JEV_API_KEY` (mismos valores que tu `.env` local).
    - `CV_JSON` — el contenido completo de tu `cv.json` (como texto plano/JSON). Como `cv.json` está gitignoreado, el runner no lo tiene; el workflow lo reconstruye desde este secret antes de correr `main.py`.
 4. (Opcional) En **Settings → Secrets and variables → Actions → Variables**, agregá `MATCH_THRESHOLD` si querés un umbral distinto al 80% default (esta va como *Variable*, no *Secret*, porque no es sensible).
 5. El workflow commitea `data/seen_jobs.json` de vuelta al repo después de cada corrida, así el estado persiste entre ejecuciones.

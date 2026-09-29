@@ -5,6 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dedup import load_seen, filter_unseen, mark_seen
+from judge import is_strong_match
 from matcher import load_cv, score_listing
 from notifier import send_digest
 from sources.getonbrd import fetch_listings
@@ -29,17 +30,29 @@ def run() -> int:
     seen_ids = load_seen(SEEN_JOBS_PATH)
     unseen = filter_unseen(listings, seen_ids)
 
+    processed_ids = []
     scored = []
     for listing in unseen:
+        judgement = is_strong_match(listing, cv)
+        if judgement is None:
+            print(f"Skipping {listing.id}: judge failed, will retry next run", file=sys.stderr)
+            continue
+
+        if not judgement:
+            processed_ids.append(listing.id)
+            continue
+
         result = score_listing(listing, cv)
         if result is None:
             print(f"Skipping {listing.id}: scoring failed, will retry next run", file=sys.stderr)
             continue
+
+        processed_ids.append(listing.id)
         scored.append(result)
 
-    if unseen and not scored:
+    if unseen and not processed_ids:
         print(
-            "All listings failed to score; likely a broken API integration (bad/expired API key, "
+            "All listings failed to process; likely a broken API integration (bad/expired API key, "
             "no balance, or persistent errors). Aborting without sending a digest.",
             file=sys.stderr,
         )
@@ -54,7 +67,6 @@ def run() -> int:
         print(f"Notification failed: {exc}", file=sys.stderr)
         return 1
 
-    processed_ids = [result.listing.id for result in scored]
     mark_seen(SEEN_JOBS_PATH, seen_ids, processed_ids)
     return 0
 
