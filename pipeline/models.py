@@ -8,6 +8,7 @@ class JobListing:
     company: str
     url: str
     description: str
+    source: str
 
 
 @dataclass(frozen=True)

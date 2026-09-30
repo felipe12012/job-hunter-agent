@@ -8,6 +8,7 @@ def make_listing() -> JobListing:
         company="Acme",
         url="https://www.getonbrd.com/jobs/programming/acme-python-dev",
         description="Build backend services in Python.",
+        source="getonbrd",
     )
 
 
@@ -16,6 +17,7 @@ def test_job_listing_fields():
     assert job.id == "acme-python-dev"
     assert job.title == "Python Developer"
     assert job.company == "Acme"
+    assert job.source == "getonbrd"
 
 
 def test_scored_listing_wraps_listing():

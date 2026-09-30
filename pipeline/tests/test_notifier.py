@@ -9,6 +9,7 @@ def make_scored(job_id: str, match_pct: int) -> ScoredListing:
         company="Acme",
         url=f"https://www.getonbrd.com/jobs/programming/{job_id}",
         description="Build APIs with Python.",
+        source="getonbrd",
     )
     return ScoredListing(
         listing=listing,
@@ -104,6 +105,7 @@ def test_send_digest_sends_plain_text_with_markdown_special_chars(monkeypatch):
         company="Under_score & `Ticks` Inc",
         url="https://www.getonbrd.com/jobs/programming/weird-job",
         description="n/a",
+        source="getonbrd",
     )
     scored = [
         ScoredListing(
@@ -137,6 +139,7 @@ def test_send_digest_truncates_long_text(monkeypatch):
         company="Acme",
         url="https://www.getonbrd.com/jobs/programming/verbose-job",
         description="n/a",
+        source="getonbrd",
     )
     scored = [
         ScoredListing(

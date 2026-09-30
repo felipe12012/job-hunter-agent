@@ -4,13 +4,14 @@ import main
 from models import JobListing, ScoredListing
 
 
-def make_listing(job_id: str) -> JobListing:
+def make_listing(job_id: str, source: str = "getonbrd") -> JobListing:
     return JobListing(
         id=job_id,
         title="Python Developer",
         company="Acme",
         url=f"https://www.getonbrd.com/jobs/programming/{job_id}",
         description="Build APIs with Python.",
+        source=source,
     )
 
 
