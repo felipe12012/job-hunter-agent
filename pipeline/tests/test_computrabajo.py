@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sources.computrabajo import parse_description, parse_listing_summaries
+from sources.computrabajo import _build_listing, parse_description, parse_listing_summaries
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "computrabajo_sample.html"
 DETAIL_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "computrabajo_detail_sample.html"
@@ -50,3 +50,19 @@ def test_parse_description_returns_empty_string_when_section_missing():
     description = parse_description("<html><body>no description here</body></html>")
 
     assert description == ""
+
+
+def test_build_listing_sets_computrabajo_source():
+    summary = {
+        "id": "CT-001",
+        "title": "Desarrollador Python Django",
+        "company": "Acme",
+        "url": "https://cl.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-desarrollador-python-django-CT-001",
+    }
+
+    listing = _build_listing(summary, "Some real description")
+
+    assert listing.source == "computrabajo"
+    assert listing.id == "CT-001"
+    assert listing.title == "Desarrollador Python Django"
+    assert listing.description == "Some real description"

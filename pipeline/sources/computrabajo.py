@@ -72,6 +72,17 @@ def parse_description(html: str) -> str:
     return " ".join(parts)
 
 
+def _build_listing(summary: dict, description: str) -> JobListing:
+    return JobListing(
+        id=summary["id"],
+        title=summary["title"],
+        company=summary["company"],
+        url=summary["url"],
+        description=description,
+        source="computrabajo",
+    )
+
+
 def fetch_listings(keywords: list[str]) -> list[JobListing]:
     summaries = parse_listing_summaries(fetch_html())
 
@@ -82,15 +93,6 @@ def fetch_listings(keywords: list[str]) -> list[JobListing]:
             continue
 
         description = parse_description(fetch_html(summary["url"]))
-
-        listings.append(
-            JobListing(
-                id=summary["id"],
-                title=summary["title"],
-                company=summary["company"],
-                url=summary["url"],
-                description=description,
-            )
-        )
+        listings.append(_build_listing(summary, description))
 
     return listings
