@@ -24,6 +24,37 @@ work extends this table and these RLS policies rather than replacing them.
   user's other Supabase projects).
 - The existing pipeline (scrapers -> Jev -> DeepSeek -> Telegram) is
   unchanged in behavior; only where it persists dedup/result state changes.
+- The repo is reorganized into two top-level folders, `pipeline/` (the
+  existing cron codebase) and `dashboard/` (the new Next.js app), so the
+  two concerns stop sharing one flat root directory now that a second
+  surface exists. This is a one-time move, not a deeper layered rewrite
+  (no domain/infrastructure split) — that's explicitly deferred until
+  there's a third surface (e.g. a real API) to justify it.
+
+## Repo Layout
+
+```
+/ (repo root)
+  README.md
+  docs/
+  .github/workflows/daily.yml        # working-directory: pipeline
+  pipeline/                          # everything that is today at repo root
+    main.py, judge.py, matcher.py, notifier.py, models.py, parse_cv.py
+    db.py                            # replaces dedup.py
+    sources/
+    requirements.txt, .env.example, cv.example.json, conftest.py
+    tests/
+  dashboard/                         # new Next.js app
+    (standard Next.js App Router layout)
+```
+
+Everything under `pipeline/` keeps its current internal structure and
+import style unchanged — this is a directory move, not a module redesign.
+`.github/workflows/daily.yml` needs `working-directory: pipeline` added
+back to every step (the same setting this project had before it was a
+standalone repo, now serving the same purpose: one repo, two independent
+codebases). The "Write cv.json from secret" step writes to
+`pipeline/cv.json`, not the repo root.
 
 ## Architecture
 
