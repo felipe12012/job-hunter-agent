@@ -37,7 +37,7 @@ def test_send_digest_sends_when_qualifying_matches_exist(monkeypatch):
     scored = [make_scored("acme-python-dev", 90), make_scored("beta-dev", 60)]
     result = send_digest(scored, bot_token="fake-token", chat_id="12345")
 
-    assert result is True
+    assert result == [("getonbrd", "acme-python-dev")]
     assert sent["json"]["chat_id"] == "12345"
     assert "Python Developer" in sent["json"]["text"]
     assert "fake-token" in sent["url"]
@@ -55,7 +55,7 @@ def test_send_digest_skips_send_when_no_qualifying_matches(monkeypatch):
     scored = [make_scored("beta-dev", 60)]
     result = send_digest(scored, bot_token="fake-token", chat_id="12345")
 
-    assert result is False
+    assert result == []
     assert called["count"] == 0
 
 
@@ -71,7 +71,7 @@ def test_send_digest_respects_custom_match_threshold(monkeypatch):
     scored = [make_scored("beta-dev", 65)]
     result = send_digest(scored, bot_token="fake-token", chat_id="12345", match_threshold=60)
 
-    assert result is True
+    assert result == [("getonbrd", "beta-dev")]
     assert "Python Developer" in sent["json"]["text"]
 
 
@@ -85,9 +85,10 @@ def test_send_digest_caps_at_three_listings(monkeypatch):
     monkeypatch.setattr("notifier.requests.post", fake_post)
 
     scored = [make_scored(f"job-{i}", 80 + i) for i in range(5)]
-    send_digest(scored, bot_token="fake-token", chat_id="12345")
+    result = send_digest(scored, bot_token="fake-token", chat_id="12345")
 
     assert sent["json"]["text"].count("% match") == 3
+    assert len(result) == 3
 
 
 def test_send_digest_sends_plain_text_with_markdown_special_chars(monkeypatch):
@@ -118,7 +119,7 @@ def test_send_digest_sends_plain_text_with_markdown_special_chars(monkeypatch):
 
     result = send_digest(scored, bot_token="fake-token", chat_id="12345")
 
-    assert result is True
+    assert result == [("getonbrd", "weird-job")]
     assert "parse_mode" not in sent["json"]
     assert "Senior *Python* Dev [Remote]" in sent["json"]["text"]
 
@@ -152,7 +153,7 @@ def test_send_digest_truncates_long_text(monkeypatch):
 
     result = send_digest(scored, bot_token="fake-token", chat_id="12345")
 
-    assert result is True
+    assert result == [("getonbrd", "verbose-job")]
     assert len(sent["json"]["text"]) <= 4000
 
 

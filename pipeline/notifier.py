@@ -27,10 +27,10 @@ def send_digest(
     bot_token: str | None = None,
     chat_id: str | None = None,
     match_threshold: int = MATCH_THRESHOLD,
-) -> bool:
+) -> list[tuple[str, str]]:
     qualifying = [s for s in scored_listings if s.match_pct >= match_threshold]
     if not qualifying:
-        return False
+        return []
 
     qualifying.sort(key=lambda s: s.match_pct, reverse=True)
     top = qualifying[:MAX_LISTINGS_PER_DIGEST]
@@ -51,4 +51,4 @@ def send_digest(
         timeout=30,
     )
     response.raise_for_status()
-    return True
+    return [(s.listing.source, s.listing.id) for s in top]
