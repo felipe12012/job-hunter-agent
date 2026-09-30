@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+type StatsRow = { total: number; approved: number; scored: number; avg_match: number | null };
+type CountRow = { source?: string; status?: string; count: number };
+
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="border rounded p-4">
@@ -19,31 +22,33 @@ export default async function StatsPage() {
     redirect("/login");
   }
 
-  const { data: listings, error } = await supabase
-    .from("listings")
-    .select("source, judge_result, match_pct, status");
+  const [statsResult, bySourceResult, byStatusResult] = await Promise.all([
+    supabase.rpc("listing_stats").single(),
+    supabase.rpc("listing_counts_by_source"),
+    supabase.rpc("listing_counts_by_status"),
+  ]);
 
-  if (error) {
-    return <main className="p-8">Failed to load stats: {error.message}</main>;
+  if (statsResult.error || bySourceResult.error || byStatusResult.error) {
+    const message =
+      statsResult.error?.message ?? bySourceResult.error?.message ?? byStatusResult.error?.message;
+    return <main className="p-8">Failed to load stats: {message}</main>;
   }
 
-  const rows = listings ?? [];
-  const total = rows.length;
-  const approved = rows.filter((r) => r.judge_result).length;
-  const scored = rows.filter((r) => r.match_pct !== null);
-  const avgMatch = scored.length
-    ? Math.round(scored.reduce((sum, r) => sum + (r.match_pct ?? 0), 0) / scored.length)
+  // Aggregated server-side (via RPC functions) instead of fetching every row -
+  // fetching all rows client-side silently truncates past PostgREST's row cap.
+  const stats = statsResult.data as unknown as StatsRow | null;
+  const bySourceRows = (bySourceResult.data ?? []) as unknown as CountRow[];
+  const byStatusRows = (byStatusResult.data ?? []) as unknown as CountRow[];
+
+  const total = Number(stats?.total ?? 0);
+  const approved = Number(stats?.approved ?? 0);
+  const scoredCount = Number(stats?.scored ?? 0);
+  const avgMatch = stats?.avg_match !== null && stats?.avg_match !== undefined
+    ? Math.round(Number(stats.avg_match))
     : null;
 
-  const bySource = rows.reduce<Record<string, number>>((acc, r) => {
-    acc[r.source] = (acc[r.source] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const byStatus = rows.reduce<Record<string, number>>((acc, r) => {
-    acc[r.status] = (acc[r.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  const bySource = Object.fromEntries(bySourceRows.map((row) => [row.source as string, Number(row.count)]));
+  const byStatus = Object.fromEntries(byStatusRows.map((row) => [row.status as string, Number(row.count)]));
 
   return (
     <main className="p-8">
@@ -57,7 +62,7 @@ export default async function StatsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <StatTile label="Total scrapeados" value={total} />
         <StatTile label="Aprobados por Jev" value={`${approved} (${total ? Math.round((approved / total) * 100) : 0}%)`} />
-        <StatTile label="Scoreados por DeepSeek" value={scored.length} />
+        <StatTile label="Scoreados por DeepSeek" value={scoredCount} />
         <StatTile label="Match % promedio" value={avgMatch ?? "-"} />
       </div>
 

@@ -5,6 +5,7 @@ import requests
 from models import JobListing
 
 LISTINGS_PATH = "/rest/v1/listings"
+PAGE_SIZE = 1000
 
 
 def _base_url(supabase_url: str | None = None) -> str:
@@ -24,17 +25,26 @@ def _auth_headers(key: str) -> dict:
 
 
 def load_seen_keys(supabase_url: str | None = None, service_role_key: str | None = None) -> set[tuple[str, str]]:
+    # PostgREST caps a single response at a fixed row count (default 1000),
+    # returning HTTP 200 with a partial result rather than an error - page
+    # through with offset/limit until a short page confirms we've reached the end.
     url = _base_url(supabase_url)
     key = _service_key(service_role_key)
-    response = requests.get(
-        f"{url}{LISTINGS_PATH}",
-        headers=_auth_headers(key),
-        params={"select": "source,id"},
-        timeout=30,
-    )
-    response.raise_for_status()
-    rows = response.json()
-    return {(row["source"], row["id"]) for row in rows}
+    keys: set[tuple[str, str]] = set()
+    offset = 0
+    while True:
+        response = requests.get(
+            f"{url}{LISTINGS_PATH}",
+            headers=_auth_headers(key),
+            params={"select": "source,id", "offset": offset, "limit": PAGE_SIZE},
+            timeout=30,
+        )
+        response.raise_for_status()
+        rows = response.json()
+        keys.update((row["source"], row["id"]) for row in rows)
+        if len(rows) < PAGE_SIZE:
+            return keys
+        offset += PAGE_SIZE
 
 
 def filter_unseen(listings: list[JobListing], seen_keys: set[tuple[str, str]]) -> list[JobListing]:

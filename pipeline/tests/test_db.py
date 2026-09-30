@@ -31,7 +31,8 @@ class FakeResponse:
 
 def test_load_seen_keys_returns_source_id_tuples(monkeypatch):
     def fake_get(url, headers, params, timeout):
-        assert params == {"select": "source,id"}
+        assert params["select"] == "source,id"
+        assert params["offset"] == 0
         return FakeResponse(
             [{"source": "getonbrd", "id": "acme-python-dev"}, {"source": "computrabajo", "id": "CT-001"}]
         )
@@ -41,6 +42,31 @@ def test_load_seen_keys_returns_source_id_tuples(monkeypatch):
     result = load_seen_keys(supabase_url="https://x.supabase.co", service_role_key="fake-key")
 
     assert result == {("getonbrd", "acme-python-dev"), ("computrabajo", "CT-001")}
+
+
+def test_load_seen_keys_pages_past_the_postgrest_row_cap(monkeypatch):
+    # Review Focus (post-review addition): PostgREST caps a single response
+    # at a fixed number of rows (default 1000). Without pagination, rows
+    # beyond that cap silently vanish from the dedup set, making already-seen
+    # listings look unseen again. Force a tiny page size so this test proves
+    # the loop advances instead of stopping after one page.
+    monkeypatch.setattr("db.PAGE_SIZE", 2)
+    pages = [
+        [{"source": "getonbrd", "id": "a"}, {"source": "getonbrd", "id": "b"}],
+        [{"source": "getonbrd", "id": "c"}],
+    ]
+    calls = []
+
+    def fake_get(url, headers, params, timeout):
+        calls.append(params["offset"])
+        return FakeResponse(pages[len(calls) - 1])
+
+    monkeypatch.setattr("db.requests.get", fake_get)
+
+    result = load_seen_keys(supabase_url="https://x.supabase.co", service_role_key="fake-key")
+
+    assert result == {("getonbrd", "a"), ("getonbrd", "b"), ("getonbrd", "c")}
+    assert calls == [0, 2]
 
 
 def test_load_seen_keys_raises_on_request_exception(monkeypatch):

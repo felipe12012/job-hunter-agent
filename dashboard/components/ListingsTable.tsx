@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type Status = "new" | "applied" | "interviewing" | "rejected" | "discarded";
 
-type Listing = {
+export type Listing = {
   source: string;
   id: string;
   title: string;
@@ -22,43 +22,40 @@ type Listing = {
 
 const STATUS_OPTIONS: Status[] = ["new", "applied", "interviewing", "rejected", "discarded"];
 
-function NotesEditor({ listing }: { listing: Listing }) {
-  const [notes, setNotes] = useState(listing.user_notes ?? "");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+type NoteSaveState = "idle" | "saving" | "saved" | "error";
 
-  async function save() {
-    setSaving(true);
-    setSaved(false);
-    const supabase = createClient();
-    await supabase
-      .from("listings")
-      .update({ user_notes: notes })
-      .eq("source", listing.source)
-      .eq("id", listing.id);
-    setSaving(false);
-    setSaved(true);
-  }
-
+function NotesEditor({
+  value,
+  saveState,
+  errorMessage,
+  onChange,
+  onSave,
+}: {
+  value: string;
+  saveState: NoteSaveState;
+  errorMessage: string | null;
+  onChange: (value: string) => void;
+  onSave: () => void;
+}) {
   return (
     <div className="mt-2">
       <p className="font-semibold text-sm mb-1">Notas</p>
       <textarea
-        value={notes}
-        onChange={(e) => {
-          setNotes(e.target.value);
-          setSaved(false);
-        }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full border rounded px-2 py-1 text-sm"
         rows={2}
       />
       <button
-        onClick={save}
-        disabled={saving}
+        onClick={onSave}
+        disabled={saveState === "saving"}
         className="mt-1 text-sm bg-black text-white rounded px-2 py-1 disabled:opacity-50"
       >
-        {saving ? "Guardando..." : saved ? "Guardado" : "Guardar"}
+        {saveState === "saving" ? "Guardando..." : saveState === "saved" ? "Guardado" : "Guardar"}
       </button>
+      {saveState === "error" && (
+        <p className="text-red-600 text-sm mt-1">No se pudo guardar: {errorMessage}</p>
+      )}
     </div>
   );
 }
@@ -71,7 +68,13 @@ export default function ListingsTable({ listings }: { listings: Listing[] }) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
   const [statusById, setStatusById] = useState<Record<string, Status>>({});
+  const [statusErrorById, setStatusErrorById] = useState<Record<string, string | null>>({});
+
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
+  const [noteSaveStateById, setNoteSaveStateById] = useState<Record<string, NoteSaveState>>({});
+  const [noteErrorById, setNoteErrorById] = useState<Record<string, string | null>>({});
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -92,13 +95,62 @@ export default function ListingsTable({ listings }: { listings: Listing[] }) {
 
   async function updateStatus(listing: Listing, status: Status) {
     const key = `${listing.source}:${listing.id}`;
+    const previous = statusById[key] ?? listing.status;
     setStatusById((prev) => ({ ...prev, [key]: status }));
+    setStatusErrorById((prev) => ({ ...prev, [key]: null }));
+
     const supabase = createClient();
-    await supabase
+    const { data, error } = await supabase
       .from("listings")
       .update({ status })
       .eq("source", listing.source)
-      .eq("id", listing.id);
+      .eq("id", listing.id)
+      .select();
+
+    // RLS blocks a mismatched update silently (0 rows, no error), so an empty
+    // result is treated the same as a request error.
+    if (error || !data || data.length === 0) {
+      setStatusById((prev) => ({ ...prev, [key]: previous }));
+      setStatusErrorById((prev) => ({
+        ...prev,
+        [key]: error?.message ?? "no se guardó (¿sesión vencida?)",
+      }));
+    }
+  }
+
+  function getNotes(listing: Listing): string {
+    const key = `${listing.source}:${listing.id}`;
+    return notesById[key] ?? listing.user_notes ?? "";
+  }
+
+  function setNotes(listing: Listing, value: string) {
+    const key = `${listing.source}:${listing.id}`;
+    setNotesById((prev) => ({ ...prev, [key]: value }));
+    setNoteSaveStateById((prev) => ({ ...prev, [key]: "idle" }));
+  }
+
+  async function saveNotes(listing: Listing) {
+    const key = `${listing.source}:${listing.id}`;
+    const value = getNotes(listing);
+    setNoteSaveStateById((prev) => ({ ...prev, [key]: "saving" }));
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("listings")
+      .update({ user_notes: value })
+      .eq("source", listing.source)
+      .eq("id", listing.id)
+      .select();
+
+    if (error || !data || data.length === 0) {
+      setNoteSaveStateById((prev) => ({ ...prev, [key]: "error" }));
+      setNoteErrorById((prev) => ({
+        ...prev,
+        [key]: error?.message ?? "no se guardó (¿sesión vencida?)",
+      }));
+      return;
+    }
+    setNoteSaveStateById((prev) => ({ ...prev, [key]: "saved" }));
   }
 
   return (
@@ -195,6 +247,9 @@ export default function ListingsTable({ listings }: { listings: Listing[] }) {
                         </option>
                       ))}
                     </select>
+                    {statusErrorById[key] && (
+                      <p className="text-red-600 text-xs mt-0.5">{statusErrorById[key]}</p>
+                    )}
                   </td>
                   <td className="p-2">{listing.notified ? "yes" : "no"}</td>
                   <td className="p-2">{new Date(listing.created_at).toLocaleDateString()}</td>
@@ -204,7 +259,13 @@ export default function ListingsTable({ listings }: { listings: Listing[] }) {
                     <td colSpan={7} className="p-4">
                       <p><strong>Reasoning:</strong> {listing.reasoning ?? "n/a"}</p>
                       <p className="mt-2"><strong>Draft message:</strong> {listing.draft_message ?? "n/a"}</p>
-                      <NotesEditor listing={listing} />
+                      <NotesEditor
+                        value={getNotes(listing)}
+                        saveState={noteSaveStateById[key] ?? "idle"}
+                        errorMessage={noteErrorById[key] ?? null}
+                        onChange={(value) => setNotes(listing, value)}
+                        onSave={() => saveNotes(listing)}
+                      />
                     </td>
                   </tr>
                 )}
