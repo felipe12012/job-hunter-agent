@@ -35,6 +35,7 @@ jobs:
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKFILL_USER_ID: ${{ secrets.BACKFILL_USER_ID }}
           MATCH_THRESHOLD: ${{ vars.MATCH_THRESHOLD }}
         run: python main.py
 

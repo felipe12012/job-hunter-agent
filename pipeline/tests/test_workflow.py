@@ -28,6 +28,7 @@ def test_workflow_uses_required_secrets():
         "JEV_API_KEY",
         "SUPABASE_URL",
         "SUPABASE_SERVICE_ROLE_KEY",
+        "BACKFILL_USER_ID",
     ):
         assert f"secrets.{secret_name}" in content
 

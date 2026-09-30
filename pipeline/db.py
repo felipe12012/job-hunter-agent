@@ -15,6 +15,10 @@ def _service_key(service_role_key: str | None = None) -> str:
     return service_role_key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 
+def _user_id(user_id: str | None = None) -> str:
+    return user_id or os.environ.get("BACKFILL_USER_ID", "")
+
+
 def _auth_headers(key: str) -> dict:
     return {"apikey": key, "Authorization": f"Bearer {key}"}
 
@@ -45,6 +49,7 @@ def insert_listing(
     draft_message: str | None = None,
     supabase_url: str | None = None,
     service_role_key: str | None = None,
+    user_id: str | None = None,
 ) -> None:
     url = _base_url(supabase_url)
     key = _service_key(service_role_key)
@@ -65,6 +70,7 @@ def insert_listing(
             "match_pct": match_pct,
             "reasoning": reasoning,
             "draft_message": draft_message,
+            "user_id": _user_id(user_id),
         },
         timeout=30,
     )

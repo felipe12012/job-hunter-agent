@@ -85,11 +85,13 @@ def test_insert_listing_sends_judge_rejected_row(monkeypatch):
         judge_result=False,
         supabase_url="https://x.supabase.co",
         service_role_key="fake-key",
+        user_id="u-1",
     )
 
     assert sent["json"]["judge_result"] is False
     assert sent["json"]["match_pct"] is None
     assert sent["json"]["source"] == "getonbrd"
+    assert sent["json"]["user_id"] == "u-1"
 
 
 def test_insert_listing_sends_full_scored_row(monkeypatch):
