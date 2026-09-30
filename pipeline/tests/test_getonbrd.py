@@ -16,6 +16,7 @@ def test_parse_listings_filters_by_keyword():
     assert listing.id == "acme-python-dev"
     assert listing.title == "Python Developer"
     assert listing.company == "Acme"
+    assert listing.source == "getonbrd"
     assert "Django" in listing.description
 
 

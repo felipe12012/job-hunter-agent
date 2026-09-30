@@ -57,6 +57,7 @@ def parse_listings(html: str, keywords: list[str]) -> list[JobListing]:
                 company=company,
                 url=url,
                 description=summary,
+                source="getonbrd",
             )
         )
 
