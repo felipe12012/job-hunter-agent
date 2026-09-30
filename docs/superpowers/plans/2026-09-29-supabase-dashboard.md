@@ -172,12 +172,12 @@ def test_workflow_notifies_telegram_on_failure():
 
 (Only the `WORKFLOW_PATH` line and the `assert job["defaults"]...` line actually changed from the pre-move version — the rest is unchanged, shown in full so there's no ambiguity about the file's final state.)
 
-- [ ] **Step 3: Run the full suite from the new location**
+- [ ] **Step 4: Run the full suite from the new location**
 
 Run: `cd pipeline && pytest -v`
 Expected: PASS (54 tests — same count as before the move, nothing else changed)
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
