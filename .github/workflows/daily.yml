@@ -12,6 +12,9 @@ jobs:
   run-pipeline:
     runs-on: ubuntu-latest
     environment: env
+    defaults:
+      run:
+        working-directory: pipeline
     steps:
       - uses: actions/checkout@v4
 
